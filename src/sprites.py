@@ -1,53 +1,57 @@
 """
 Module: sprites.py
-Description: Contains the Tile and Board classes, handling game logic and grid management.
-Inputs: Grid coordinates, mine configurations
-Outputs: Game state data and UI rendering primitives
-Author: [Your Full Name(s)]
+Description: Tile and Board classes to manage the grid state, mine placement,
+             number clues, and recursive uncovering.
+Inputs: Grid coordinates, dimensions, mine count
+Outputs: Board state data and rendered Pygame surfaces
+Author: [Your Full Name]
 Date: September 2026
-External Sources: 
-- "How to make Minesweeper in Pygame" by Tech & Gaming (YouTube).
-- Generative AI (Gemini) utilized to modify tutorial to strictly match EECS 581 constraints.
+External Sources:
+- Tech & Gaming YouTube tutorial (basic Tile and Board structure)
+- Modified mine placement to guarantee safe first-click for EECS 581
+- Replaced image blitting with native Pygame shape drawing
 """
 
-import pygame
 import random
+import pygame
 from settings import *
 
+
 class Tile:
-    """Sourced: Standard tutorial Tile class to hold grid states."""
+    # Basic data container for individual tile states
     def __init__(self, x, y, type_val):
         self.x = x
         self.y = y
-        self.type = type_val  # '.' = empty, 'X' = mine, 'C' = clue
+        self.type = type_val  # '.' = empty, 'X' = mine, 'C' = clue number
         self.revealed = False
         self.flagged = False
         self.clue_num = 0
 
+
 class Board:
     def __init__(self):
-        # Sourced: 2D list comprehension for the board from tutorial
+        # 10x10 grid of tile objects
         self.board_list = [[Tile(col, row, '.') for row in range(ROWS)] for col in range(COLS)]
-        self.dug = []  # Tracks revealed tiles for recursion
+        # Track revealed tiles during recursion using a set for fast lookups
+        self.dug = set()
 
     def place_mines(self, safe_x, safe_y, num_mines):
-        """
-        Combined: Modified from tutorial to guarantee a safe first click 
-        and safe adjacent neighbors based on rubric.
-        """
-        safe_zone = []
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
-                safe_zone.append((safe_x + dx, safe_y + dy))
+        # Safe first click: exclude the clicked cell and its 8 neighbors from mine pool
+        safe_zone = set()
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                safe_zone.add((safe_x + dx, safe_y + dy))
 
+        # Get all coordinates on the board that are outside the safe zone
         available = [(x, y) for x in range(COLS) for y in range(ROWS) if (x, y) not in safe_zone]
-        mine_spots = random.sample(available, num_mines)
         
+        # Pick random distinct locations for the mines
+        mine_spots = random.sample(available, num_mines)
         for x, y in mine_spots:
             self.board_list[x][y].type = 'X'
 
     def place_clues(self):
-        """Sourced: Tutorial algorithm for calculating neighbor numbers."""
+        # Calculate adjacent mine counts for every non-mine tile
         for x in range(COLS):
             for y in range(ROWS):
                 if self.board_list[x][y].type != 'X':
@@ -57,10 +61,10 @@ class Board:
                         self.board_list[x][y].clue_num = total_mines
 
     def check_neighbors(self, x, y):
-        """Sourced: Tutorial's 8-way neighbor coordinate check."""
+        # Check all 8 surrounding cells and count mines
         total = 0
-        for dx in [-1, 0, 1]:
-            for dy in [-1, 0, 1]:
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < COLS and 0 <= ny < ROWS:
                     if self.board_list[nx][ny].type == 'X':
@@ -68,33 +72,32 @@ class Board:
         return total
 
     def dig(self, x, y):
-        """
-        Sourced: Tutorial's recursive flood-fill algorithm.
-        Returns False if a mine is hit, True otherwise.
-        """
-        self.dug.append((x, y))
+        # Recursive flood fill reveal
+        self.dug.add((x, y))
         tile = self.board_list[x][y]
 
+        # Stepped on a mine -> game over
         if tile.type == 'X':
             tile.revealed = True
-            return False  # Loss condition triggered
-        elif tile.type == 'C':
-            tile.revealed = True
-            return True   # Hit a clue, halt recursion this direction
+            return False
 
+        # Hit a numbered clue -> reveal and stop recursing in this direction
+        if tile.type == 'C':
+            tile.revealed = True
+            return True
+
+        # Blank tile: reveal and recursively check adjacent neighbors
         tile.revealed = True
 
         for row in range(max(0, x - 1), min(COLS - 1, x + 1) + 1):
             for col in range(max(0, y - 1), min(ROWS - 1, y + 1) + 1):
                 if (row, col) not in self.dug:
                     self.dig(row, col)
+
         return True
 
     def draw(self, surface, font):
-        """
-        Original: Replaced tutorial's image blitting with native Pygame shapes.
-        Ensures the game runs without needing an external assets folder.
-        """
+        # Render tiles using pygame drawing primitives instead of external image files
         for x in range(COLS):
             for y in range(ROWS):
                 tile = self.board_list[x][y]
@@ -104,17 +107,28 @@ class Board:
 
                 if tile.revealed:
                     pygame.draw.rect(surface, TILE_REVEALED, rect)
+                    
                     if tile.type == 'X':
-                        pygame.draw.circle(surface, MINE_COLOR, (pos_x + TILESIZE//2, pos_y + TILESIZE//2), 10)
+                        # Draw mine as a circle
+                        center = (pos_x + TILESIZE // 2, pos_y + TILESIZE // 2)
+                        pygame.draw.circle(surface, MINE_COLOR, center, 10)
                     elif tile.type == 'C':
+                        # Render adjacent mine number text
                         color = NUM_COLORS.get(tile.clue_num, TEXT_COLOR)
                         text = font.render(str(tile.clue_num), True, color)
                         surface.blit(text, (pos_x + 13, pos_y + 8))
                 else:
                     pygame.draw.rect(surface, TILE_UNREVEALED, rect)
+                    
                     if tile.flagged:
-                        # Draws a red flag
-                        pygame.draw.polygon(surface, FLAG_COLOR, [(pos_x+10, pos_y+10), (pos_x+25, pos_y+15), (pos_x+10, pos_y+20)])
-                        pygame.draw.line(surface, TEXT_COLOR, (pos_x+10, pos_y+10), (pos_x+10, pos_y+30), 2)
+                        # Draw flag: flagpole line and red triangle
+                        flag_points = [
+                            (pos_x + 10, pos_y + 10),
+                            (pos_x + 25, pos_y + 15),
+                            (pos_x + 10, pos_y + 20)
+                        ]
+                        pygame.draw.polygon(surface, FLAG_COLOR, flag_points)
+                        pygame.draw.line(surface, TEXT_COLOR, (pos_x + 10, pos_y + 10), (pos_x + 10, pos_y + 30), 2)
 
+                # Grid outline around the tile
                 pygame.draw.rect(surface, GRID_COLOR, rect, 1)
