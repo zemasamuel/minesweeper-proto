@@ -3,11 +3,6 @@ Module: settings.py
 Description: Game settings, dimensions, and color constants.
 Inputs: None
 Outputs: Constants imported by main.py and sprites.py
-Author: [Your Full Name]
-Date: September 2026
-External Sources:
-- Base configuration layout adapted from Tech & Gaming Pygame tutorial
-- Custom dimensions and vector color palette written for EECS 581
 """
 
 # Board dimensions (10x10 for project requirements)
