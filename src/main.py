@@ -4,11 +4,6 @@ Description: Main driver for the minesweeper project. Handles the pygame window,
              input loops, game states, and board labels.
 Inputs: Console mine input (10-20), mouse events
 Outputs: Interactive Pygame window
-Author: [Your Full Name]
-Date: September 2026
-External Sources:
-- Tech & Gaming YouTube tutorial (basic game setup and layout)
-- Adapted to meet EECS 581 requirements (labels, safe clicks, input constraints)
 """
 
 import sys
