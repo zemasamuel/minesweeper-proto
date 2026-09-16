@@ -2,14 +2,6 @@
 Module: sprites.py
 Description: Tile and Board classes to manage the grid state, mine placement,
              number clues, and recursive uncovering.
-Inputs: Grid coordinates, dimensions, mine count
-Outputs: Board state data and rendered Pygame surfaces
-Author: [Your Full Name]
-Date: September 2026
-External Sources:
-- Tech & Gaming YouTube tutorial (basic Tile and Board structure)
-- Modified mine placement to guarantee safe first-click for EECS 581
-- Replaced image blitting with native Pygame shape drawing
 """
 
 import random
